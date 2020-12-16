@@ -87,6 +87,33 @@ def null_scan(dst_ip,dst_port,dst_timeout):
         return "CHECK"
 
 
+def ack_flag_scan(dst_ip,dst_port,dst_timeout):
+    ack_flag_scan_resp = sr1(IP(dst=dst_ip)/TCP(dport=dst_port,flags="A"),timeout=dst_timeout)
+    if (str(type(ack_flag_scan_resp))=="<type 'NoneType'>"):
+        return "Stateful firewall present\n(Filtered)"
+    elif(ack_flag_scan_resp.haslayer(TCP)):
+        if(ack_flag_scan_resp.getlayer(TCP).flags == 0x4):
+            return "No firewall\n(Unfiltered)"
+    elif(ack_flag_scan_resp.haslayer(ICMP)):
+        if(int(ack_flag_scan_resp.getlayer(ICMP).type)==3 and int(ack_flag_scan_resp.getlayer(ICMP).code) in [1,2,3,9,10,13]):
+            return "Stateful firewall present\n(Filtered)"
+    else:
+        return "CHECK"
+
+
+def window_scan(dst_ip,dst_port,dst_timeout):
+    window_scan_resp = sr1(IP(dst=dst_ip)/TCP(dport=dst_port,flags="A"),timeout=dst_timeout)
+    if (str(type(window_scan_resp))=="<type 'NoneType'>"):
+        return "No response"
+    elif(window_scan_resp.haslayer(TCP)):
+        if(window_scan_resp.getlayer(TCP).window == 0):
+            return "Closed"
+        elif(window_scan_resp.getlayer(TCP).window > 0):
+            return "Open"
+    else:
+        return "CHECK"
+
+
 def udp_scan(dst_ip,dst_port,dst_timeout):
     udp_scan_resp = sr1(IP(dst=dst_ip)/UDP(dport=dst_port),timeout=dst_timeout)
     if (str(type(udp_scan_resp))=="<type 'NoneType'>"):

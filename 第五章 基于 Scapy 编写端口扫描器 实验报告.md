@@ -174,20 +174,30 @@ from scapy.all import *
 
 dst_ip = "192.168.1.2"
 src_port = RandShort()
-dst_port=80
+dst_port= 9000
+dst_timeout=10
 
-xmas_scan_resp = sr1(IP(dst=dst_ip)/TCP(dport=dst_port,flags="FPU"),timeout=10)
-if (str(type(xmas_scan_resp))=="<type 'NoneType'>"):
-	with open("/mnt/share/1.txt", "w") as file:
-		file.write("Open|Filtered")
-elif(xmas_scan_resp.haslayer(TCP)):
-	if(xmas_scan_resp.getlayer(TCP).flags == 0x14):
+def udp_scan(dst_ip,dst_port,dst_timeout):
+	udp_scan_resp = sr1(IP(dst=dst_ip)/UDP(dport=dst_port),timeout=dst_timeout)
+	if (str(type(udp_scan_resp))=="<type 'NoneType'>"): #no response
 		with open("/mnt/share/1.txt", "w") as file:
-			file.write("Closed")
-elif(xmas_scan_resp.haslayer(ICMP)):
-	if(int(xmas_scan_resp.getlayer(ICMP).type)==3 and int(xmas_scan_resp.getlayer(ICMP).code) in [1,2,3,9,10,13]):
+			file.write("open|flitered")
+	elif (udp_scan_resp.haslayer(UDP)): # response  open
 		with open("/mnt/share/1.txt", "w") as file:
-			file.write("Filtered")
+				file.write("open")
+	elif(udp_scan_resp.haslayer(ICMP)): # response icmp
+		if(int(udp_scan_resp.getlayer(ICMP).type)==3 and int(udp_scan_resp.getlayer(ICMP).code)==3):#desination unreachable
+			with open("/mnt/share/1.txt", "w") as file:
+				file.write("closed")
+		elif(int(udp_scan_resp.getlayer(ICMP).type)==3 and int(udp_scan_resp.getlayer(ICMP).code) in [1,2,9,10,13]):#filter
+			with open("/mnt/share/1.txt", "w") as file:
+				file.write("closed")
+	else:
+		with open("/mnt/share/1.txt", "w") as file:
+			file.write(str(type(udp_scan_resp)))
+
+
+udp_scan(dst_ip,dst_port,dst_timeout)
 ```
 ### 7.使用 python socket 编程临时开启 udp server
 ```
